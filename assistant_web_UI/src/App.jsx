@@ -61,7 +61,9 @@ export default function App() {
   const sendToN8n = async (text) => {
     console.log('Sending:', text)
     try {
-      const response = await fetch('http://localhost:5678/webhook/customer-chat', {
+      // Relative path: the Vite dev server proxies /webhook/* to n8n
+      // (see vite.config.js), keeping the browser same-origin.
+      const response = await fetch('/webhook/customer-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +78,9 @@ export default function App() {
         throw new Error(`Webhook failed: ${response.status}`)
       }
 
-      const data = await response.json()
+      // Read as text first: n8n may answer 200 with an empty body,
+      // which would make response.json() throw.
+      const data = await response.text()
       console.log('n8n response:', data)
 
       const reply = extractReply(data)
