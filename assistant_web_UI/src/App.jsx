@@ -7,35 +7,6 @@ function timeNow() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-function botReply(text) {
-  const t = text.toLowerCase()
-  if (/(^|\W)(hi|hello|hey|good (morning|afternoon|evening))(\W|$)/.test(t))
-    return { text: 'Hello! 👋 Welcome to Northbeam Studio support. How can I help you today?' }
-  if (t.includes('track') || t.includes('order') || t.includes('parcel'))
-    return {
-      text: 'I can help with that. Orders usually arrive within 3–5 business days. If you share your order number, I can look it up for you.',
-      chips: ['Where is my package?', 'Change delivery address'],
-    }
-  if (t.includes('hour') || t.includes('open') || t.includes('close'))
-    return { text: 'We\'re open Mon–Fri, 9:00 AM – 6:00 PM, and Saturday 10:00 AM – 2:00 PM. I\'m here 24/7 for quick questions.' }
-  if (t.includes('ship') || t.includes('deliver'))
-    return { text: 'Standard shipping takes 3–5 business days and is free over $50. Express (1–2 days) is available at checkout.' }
-  if (t.includes('return') || t.includes('refund') || t.includes('exchange'))
-    return { text: 'Returns are easy — you have 30 days from delivery for a full refund. Just keep the item unused and in its original packaging.' }
-  if (t.includes('price') || t.includes('cost') || t.includes('pricing') || t.includes('plan'))
-    return { text: 'Our plans start at $19/month. You can compare features anytime on the Pricing page — want me to send you the link?' }
-  if (t.includes('human') || t.includes('agent') || t.includes('person') || t.includes('call') || t.includes('phone'))
-    return { text: 'Of course — I\'ll connect you with a human agent. Average wait right now is under 2 minutes. Meanwhile, is there anything I can answer first?' }
-  if (t.includes('thank'))
-    return { text: 'You\'re very welcome! 😊 Anything else I can help with?' }
-  if (t.includes('bye'))
-    return { text: 'Goodbye, and thanks for stopping by! 👋' }
-  return {
-    text: 'Got it — let me make sure I point you the right way. Could you tell me a bit more, or pick one of the topics below?',
-    chips: ['Track my order', 'Business hours', 'Pricing'],
-  }
-}
-
 let idCounter = 0
 const msg = (from, text, chips) => ({ id: ++idCounter, from, text, chips, time: timeNow() })
 
@@ -45,39 +16,20 @@ export default function App() {
     msg('bot', 'Hi there! 👋 I\'m Nia, your support assistant. Ask me anything or pick a topic below.', QUICK_REPLIES),
   ])
   const [input, setInput] = useState('')
-  const [typing, setTyping] = useState(false)
-  const [unread, setUnread] = useState(0)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typing, open])
-
-  const sendBotReply = (userText) => {
-    setTyping(true)
-    const delay = 800 + (idCounter % 7) * 100
-    setTimeout(() => {
-      const { text, chips } = botReply(userText)
-      setTyping(false)
-      setMessages((m) => [...m, msg('bot', text, chips)])
-      if (!open) setUnread((u) => u + 1)
-    }, delay)
-  }
+  }, [messages, open])
 
   const send = (text) => {
     const clean = text.trim()
-    if (!clean || typing) return
+    if (!clean) return
     setMessages((m) => [...m, msg('user', clean)])
     setInput('')
-    sendBotReply(clean)
   }
 
-  const toggle = () => {
-    setOpen((o) => {
-      if (o === false) setUnread(0)
-      return !o
-    })
-  }
+  const toggle = () => setOpen((o) => !o)
 
   return (
     <div className="demo-page">
@@ -104,7 +56,7 @@ export default function App() {
               </div>
               <div className="chat-meta">
                 <strong>Nia · Support Assistant</strong>
-                <span className="chat-status"><span className="dot" /> Online — replies instantly</span>
+                <span className="chat-status"><span className="dot" /> Online</span>
               </div>
               <button className="chat-close" onClick={toggle} aria-label="Close chat">✕</button>
             </header>
@@ -126,14 +78,6 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {typing && (
-                <div className="msg-row bot">
-                  <div className="msg-avatar" aria-hidden="true">N</div>
-                  <div className="msg-bubble typing">
-                    <span /><span /><span />
-                  </div>
-                </div>
-              )}
               <div ref={bottomRef} />
             </div>
 
@@ -162,7 +106,6 @@ export default function App() {
           onClick={toggle}
           aria-label={open ? 'Close support chat' : 'Open support chat'}
         >
-          {!open && unread > 0 && <span className="chat-badge">{unread}</span>}
           {open ? (
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M18 6 6 18M6 6l12 12" />
