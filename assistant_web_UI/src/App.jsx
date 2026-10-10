@@ -29,6 +29,8 @@ export default function App() {
     setInput('')
   }
 
+  const sendMessage = () => send(input)
+
   const toggle = () => setOpen((o) => !o)
 
   return (
@@ -92,10 +94,8 @@ export default function App() {
                 aria-label="Type your message"
                 maxLength={500}
               />
-              <button type="submit" aria-label="Send message" disabled={!input.trim()}>
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" />
-                </svg>
+              <button type="button" onClick={sendMessage} disabled={!input.trim()}>
+                Send
               </button>
             </form>
           </section>
