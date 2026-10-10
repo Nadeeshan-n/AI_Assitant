@@ -10,6 +10,13 @@ function timeNow() {
 let idCounter = 0
 const msg = (from, text, chips) => ({ id: ++idCounter, from, text, chips, time: timeNow() })
 
+// One chat session ID per browser tab
+let chatSessionId = sessionStorage.getItem('chatSessionId')
+if (!chatSessionId) {
+  chatSessionId = crypto.randomUUID()
+  sessionStorage.setItem('chatSessionId', chatSessionId)
+}
+
 export default function App() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState(() => [
@@ -33,38 +40,48 @@ export default function App() {
   const sendMessage = () => send(input)
 
   // Pull a readable reply out of an n8n webhook response
+  // (handles objects, arrays, plain strings, or stringified JSON)
   const extractReply = (data) => {
-    try {
-      const parsed = JSON.parse(data)
-      const obj = Array.isArray(parsed) ? parsed[0] : parsed
-      if (typeof obj === 'string') return obj
-      return obj?.output || obj?.message || obj?.text || obj?.reply || data
-    } catch {
-      return data
+    if (typeof data === 'string') {
+      try {
+        return extractReply(JSON.parse(data))
+      } catch {
+        return data
+      }
     }
+    const obj = Array.isArray(data) ? data[0] : data
+    if (typeof obj === 'string') return obj
+    if (obj && typeof obj === 'object') {
+      return obj.output ?? obj.message ?? obj.text ?? obj.reply ?? JSON.stringify(obj)
+    }
+    return String(obj ?? '')
   }
 
   // POST the user's message to the n8n customer-chat webhook
   const sendToN8n = async (text) => {
     console.log('Sending:', text)
     try {
-      const response = await fetch('/webhook-test/customer-chat', {
+      const response = await fetch('http://localhost:5678/webhook/customer-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: text,
-          sessionId: 'test-session',
+          sessionId: chatSessionId,
+          chatInput: text,
         }),
       })
 
-      const data = await response.text()
+      if (!response.ok) {
+        throw new Error(`Webhook failed: ${response.status}`)
+      }
+
+      const data = await response.json()
       console.log('n8n response:', data)
 
       const reply = extractReply(data)
-      if (reply && reply.trim()) {
-        setMessages((m) => [...m, msg('bot', reply)])
+      if (reply && String(reply).trim()) {
+        setMessages((m) => [...m, msg('bot', String(reply))])
       }
     } catch (error) {
       console.error('Error:', error)
