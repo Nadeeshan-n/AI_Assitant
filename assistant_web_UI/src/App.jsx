@@ -85,7 +85,7 @@ export default function App() {
       }
     } catch (error) {
       console.error('Error:', error)
-      setMessages((m) => [...m, msg('bot', "Sorry — I couldn't reach the assistant service. Please try again in a moment.")])
+      setMessages((m) => [...m, msg('bot', `Sorry — I couldn't reach the assistant service. (Error: ${error.message || error})`)])
     }
   }
 
