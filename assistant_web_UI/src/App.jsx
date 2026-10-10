@@ -27,9 +27,50 @@ export default function App() {
     if (!clean) return
     setMessages((m) => [...m, msg('user', clean)])
     setInput('')
+    sendToN8n(clean)
   }
 
   const sendMessage = () => send(input)
+
+  // Pull a readable reply out of an n8n webhook response
+  const extractReply = (data) => {
+    try {
+      const parsed = JSON.parse(data)
+      const obj = Array.isArray(parsed) ? parsed[0] : parsed
+      if (typeof obj === 'string') return obj
+      return obj?.output || obj?.message || obj?.text || obj?.reply || data
+    } catch {
+      return data
+    }
+  }
+
+  // POST the user's message to the n8n customer-chat webhook
+  const sendToN8n = async (text) => {
+    console.log('Sending:', text)
+    try {
+      const response = await fetch('/webhook-test/customer-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: text,
+          sessionId: 'test-session',
+        }),
+      })
+
+      const data = await response.text()
+      console.log('n8n response:', data)
+
+      const reply = extractReply(data)
+      if (reply && reply.trim()) {
+        setMessages((m) => [...m, msg('bot', reply)])
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages((m) => [...m, msg('bot', "Sorry — I couldn't reach the assistant service. Please try again in a moment.")])
+    }
+  }
 
   const toggle = () => setOpen((o) => !o)
 
